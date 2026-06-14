@@ -65,12 +65,19 @@ body { min-height: 100vh; }
 /* ── Tabs ── */
 .tabs-wrap {
   display: flex;
-  gap: 6px;
+  flex-wrap: nowrap;
+  gap: 8px;
   overflow-x: auto;
-  padding: 12px 0 0;
+  overflow-y: hidden;
+  padding: 12px 8px 6px 0;
+  scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
 }
-.tabs-wrap::-webkit-scrollbar { height: 0; }
+.tabs-wrap::-webkit-scrollbar { height: 6px; }
+.tabs-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+.tabs-wrap::-webkit-scrollbar-track { background: transparent; }
 .tab-btn {
   flex-shrink: 0;
   border: 1px solid var(--line);
@@ -798,6 +805,56 @@ body { min-height: 100vh; }
 }
 .chat-ticket-info { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
 
+/* ── Pager ── */
+.pager-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin: 16px 0 8px;
+}
+.pager-btn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--text);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.pager-btn:hover {
+  background: #f8fafc;
+  border-color: #93c5fd;
+}
+.pager-btn.active {
+  background: var(--primary-2);
+  color: #fff;
+  border-color: var(--primary-2);
+}
+
+/* ── Assigned complete button ── */
+.assigned-complete-btn {
+  margin-top: 6px;
+  padding: 5px 12px;
+  border: 1px solid #16a34a;
+  background: #f0fdf4;
+  color: #16a34a;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.assigned-complete-btn:hover {
+  background: #16a34a;
+  color: #fff;
+}
+
 </style>
 </head>
 <body>
@@ -954,6 +1011,14 @@ const TRANG_THAI_BY_SHEET = {
     'Từ chối bảo hành',
     'Khác',
   ],
+  'Kho thu cũ': [
+    'Đang xử lý',
+    'Hoàn thành',
+  ],
+  'Kho nhập hàng': [
+    'Đang xử lý',
+    'Hoàn thành',
+  ],
   'DEFAULT': [
     'Chờ xử lý',
     'Đang xử lý',
@@ -999,6 +1064,8 @@ let currentPhieuList = [];
 let supportRequestsCache = [];
 let searchTimeout = null;
 let fakeLoadingTimer = null;
+let currentPage = 1;
+const PAGE_SIZE = 15;
 
 // ================================================================
 //  INIT
@@ -1013,7 +1080,8 @@ function renderTabs() {
   const wrap = document.getElementById('tabsWrap');
   wrap.innerHTML = '<button class="tab-btn active" data-view="ycsc" data-sheet="">Tất cả</button>' +
     SHEETS.map(s => `<button class="tab-btn" data-view="ycsc" data-sheet="${esc(s.name)}">${esc(s.label)}<span class="tab-count" id="tabCount_${esc(s.name).replace(/\s/g,'_')}">0</span></button>`).join('') +
-    '<button class="tab-btn" data-view="support" data-sheet="">Phiếu hỗ trợ<span class="tab-count" id="tabCount_SUPPORT">0</span></button>';
+    '<button class="tab-btn" data-view="support" data-sheet="">Phiếu hỗ trợ<span class="tab-count" id="tabCount_SUPPORT">0</span></button>' +
+    '<button class="tab-btn" data-view="assigned" data-sheet="">Đã giao<span class="tab-count" id="tabCount_ASSIGNED">0</span></button>';
 }
 
 function bindEvents() {
@@ -1028,6 +1096,8 @@ function bindEvents() {
     updateStatusOptions();
     if (currentView === 'support') {
       loadSupportRequests();
+    } else if (currentView === 'assigned') {
+      loadAssignedTickets();
     } else {
       applyFilters();
     }
@@ -1207,7 +1277,15 @@ function getFilteredData() {
 
   const selectedStatuses = getSelectedStatuses();
   if (selectedStatuses.length) {
-    data = data.filter(p => selectedStatuses.includes(p.trangThaiChinh || 'Chưa xử lý'));
+    data = data.filter(p => {
+      let status;
+      if (p.sheetName === 'Kho thu cũ' || p.sheetName === 'Kho nhập hàng') {
+        status = p.hoanThanh ? 'Hoàn thành' : 'Đang xử lý';
+      } else {
+        status = p.trangThaiChinh || 'Chưa xử lý';
+      }
+      return selectedStatuses.includes(status);
+    });
   }
 
   // Sort by time desc
@@ -1245,10 +1323,15 @@ function applyFilters() {
     loadSupportRequests();
     return;
   }
+  if (currentView === 'assigned') {
+    loadAssignedTickets();
+    return;
+  }
   document.getElementById('emptyState').textContent = 'Không có phiếu phù hợp';
   const dateFiltered = getDateFilteredData();
   const filtered = getFilteredData();
   currentPhieuList = filtered;
+  currentPage = 1;
   renderKPI(dateFiltered);
   renderTickets(filtered);
   updateStatusOptions();
@@ -1426,18 +1509,26 @@ function renderKPI(data) {
 function renderTickets(data) {
   const wrap = document.getElementById('ticketsWrap');
   const empty = document.getElementById('emptyState');
+  let pager = document.getElementById('pagerWrap');
 
   if (!data.length) {
     wrap.classList.add('hidden');
     empty.classList.remove('hidden');
+    if (pager) pager.classList.add('hidden');
     return;
   }
 
   empty.classList.add('hidden');
   wrap.classList.remove('hidden');
 
+  const totalPages = Math.max(1, Math.ceil(data.length / PAGE_SIZE));
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+  const startIdx = (currentPage - 1) * PAGE_SIZE;
+  const pageData = data.slice(startIdx, startIdx + PAGE_SIZE);
+
   const nowTime = new Date().getTime();
-  wrap.innerHTML = data.map(p => {
+  wrap.innerHTML = pageData.map(p => {
     let status, badgeClass;
     if (p.sheetName === 'Kho thu cũ' || p.sheetName === 'Kho nhập hàng') {
       status = p.hoanThanh ? 'Hoàn thành' : 'Đang xử lý';
@@ -1465,6 +1556,55 @@ function renderTickets(data) {
         </div>
       </div>`;
   }).join('');
+
+  renderPager(totalPages);
+}
+
+function renderPager(totalPages) {
+  let pager = document.getElementById('pagerWrap');
+  if (!pager) {
+    pager = document.createElement('div');
+    pager.id = 'pagerWrap';
+    pager.className = 'pager-wrap';
+    const ticketsWrap = document.getElementById('ticketsWrap');
+    ticketsWrap.parentNode.insertBefore(pager, ticketsWrap.nextSibling);
+  }
+
+  if (totalPages <= 1) {
+    pager.classList.add('hidden');
+    pager.innerHTML = '';
+    return;
+  }
+
+  pager.classList.remove('hidden');
+
+  // Tính range hiển thị (tối đa 10 nút số)
+  const maxButtons = 10;
+  let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+  let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+  if (endPage - startPage + 1 < maxButtons) {
+    startPage = Math.max(1, endPage - maxButtons + 1);
+  }
+
+  let html = '';
+  if (currentPage > 1) {
+    html += `<button class="pager-btn" onclick="goToPage(${currentPage - 1})">‹ Trước</button>`;
+  }
+  for (let i = startPage; i <= endPage; i++) {
+    const cls = i === currentPage ? 'pager-btn active' : 'pager-btn';
+    html += `<button class="${cls}" onclick="goToPage(${i})">${i}</button>`;
+  }
+  if (currentPage < totalPages) {
+    html += `<button class="pager-btn" onclick="goToPage(${currentPage + 1})">Tiếp ›</button>`;
+  }
+
+  pager.innerHTML = html;
+}
+
+function goToPage(page) {
+  currentPage = page;
+  renderTickets(currentPhieuList);
+  window.scrollTo({ top: document.getElementById('ticketsWrap').offsetTop - 80, behavior: 'smooth' });
 }
 
 async function loadSupportRequests(forceRefresh) {
@@ -1488,6 +1628,11 @@ async function loadSupportRequests(forceRefresh) {
 function renderSupportRequests(data) {
   const wrap = document.getElementById('ticketsWrap');
   const empty = document.getElementById('emptyState');
+  const pager = document.getElementById('pagerWrap');
+  if (pager) {
+    pager.classList.add('hidden');
+    pager.innerHTML = '';
+  }
 
   if (!data.length) {
     wrap.classList.add('hidden');
@@ -1516,6 +1661,94 @@ function renderSupportRequests(data) {
       </div>
     </div>
   `).join('');
+}
+
+// ================================================================
+//  ASSIGNED TICKETS (Đã giao)
+// ================================================================
+let assignedTicketsCache = [];
+
+async function loadAssignedTickets(forceRefresh) {
+  showLoading(true);
+  try {
+    if (forceRefresh || !assignedTicketsCache.length) {
+      assignedTicketsCache = await apiCall('getAssignedTickets');
+    }
+    const data = assignedTicketsCache || [];
+    const countEl = document.getElementById('tabCount_ASSIGNED');
+    if (countEl) countEl.textContent = data.length;
+    renderAssignedTickets(data);
+  } catch (err) {
+    showToast('Lỗi tải phiếu đã giao: ' + err.message);
+    renderAssignedTickets([]);
+  } finally {
+    showLoading(false);
+  }
+}
+
+function renderAssignedTickets(data) {
+  const wrap = document.getElementById('ticketsWrap');
+  const empty = document.getElementById('emptyState');
+  const pager = document.getElementById('pagerWrap');
+  if (pager) {
+    pager.classList.add('hidden');
+    pager.innerHTML = '';
+  }
+
+  if (!data.length) {
+    wrap.classList.add('hidden');
+    empty.classList.remove('hidden');
+    empty.textContent = 'Chưa có phiếu nào được giao';
+    return;
+  }
+
+  empty.classList.add('hidden');
+  wrap.classList.remove('hidden');
+  wrap.innerHTML = data.map(r => {
+    const isDone = String(r.trangThai || '').trim() === 'Hoàn thành';
+    const badgeClass = isDone ? 'badge-green' : 'badge-blue';
+    const badgeText = isDone ? 'Hoàn thành' : 'Đang xử lý';
+    const completeBtn = isDone
+      ? `<div style="font-size:11px;color:#16a34a;font-weight:700;margin-top:4px;">🕒 ${esc(r.thoiGianHoanThanh || '')}</div>`
+      : `<button class="assigned-complete-btn" onclick="event.stopPropagation();completeAssignedTicket('${esc(r.id)}')">✓ Hoàn thành</button>`;
+    return `
+      <div class="ticket-card">
+        <div class="ticket-left">
+          <div class="ticket-ma">${esc(r.maYeuCau)}</div>
+          <div class="ticket-ten">${esc(r.tenHangSuaChua || '')}</div>
+          <div class="ticket-meta">
+            <span>${esc(r.thoiGianGiao || '')}</span>
+            <span>&#183;</span>
+            <span>👤 ${esc(r.assigneeName)}</span>
+            <span>&#183;</span>
+            <span>${esc(r.sheetGoc || '')}</span>
+            ${r.imei ? '<span>&#183;</span><span>IMEI: ' + esc(r.imei) + '</span>' : ''}
+          </div>
+          ${r.ghiChu ? `<div style="font-size:11px;color:#475569;margin-top:4px;">📝 ${esc(r.ghiChu)}</div>` : ''}
+        </div>
+        <div class="ticket-right">
+          <span class="badge ${badgeClass}">${esc(badgeText)}</span>
+          ${completeBtn}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function completeAssignedTicket(id) {
+  if (!confirm('Xác nhận đánh dấu phiếu này đã hoàn thành?')) return;
+  try {
+    const res = await apiPost('completeAssignedTicket', { id });
+    const item = (assignedTicketsCache || []).find(x => x.id === id);
+    if (item) {
+      item.trangThai = res.trangThai || 'Hoàn thành';
+      item.thoiGianHoanThanh = res.thoiGianHoanThanh || '';
+    }
+    showToast('Đã đánh dấu hoàn thành');
+    renderAssignedTickets(assignedTicketsCache || []);
+  } catch (err) {
+    showToast('Lỗi: ' + err.message);
+  }
 }
 
 function openSupportDetail(maPhieu) {
@@ -1717,7 +1950,7 @@ async function openDetail(sheetName, maYeuCau) {
 
       <div class="edit-group">
         <label class="edit-label">Tên linh kiện sửa chữa</label>
-        <input id="editLinhKien" class="edit-input" type="text" value="${esc(phieu.tenLinhKienSuaChua)}" ${phieu.sheetName === 'CNTT' ? 'disabled' : ''}>
+        <input id="editLinhKien" class="edit-input" type="text" value="${esc(phieu.tenLinhKienSuaChua)}" ${(phieu.sheetName === 'CNTT' || phieu.sheetName === 'CN141') ? 'disabled' : ''}>
       </div>
 
       <div class="edit-group">
@@ -1914,35 +2147,53 @@ function esc(s) {
 </script>
 
 <!-- Chat Bubble -->
-<button id="chatBubble" class="chat-bubble" type="button" title="Xin thông tin">
+<button id="chatBubble" class="chat-bubble" type="button" title="Giao việc">
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H6L4 18V4H20V16Z" fill="currentColor"/>
   </svg>
 </button>
 
-<!-- Chat Modal -->
+<!-- Giao việc Modal -->
 <div id="chatModal" class="modal-overlay">
-  <div class="chat-modal-content">
+  <div class="chat-modal-content" style="max-width:680px;">
     <div class="chat-modal-header">
-      <h3>Xin thông tin</h3>
+      <h3>📌 Giao việc</h3>
       <button id="closeChatModal" class="chat-close-btn" type="button">×</button>
     </div>
 
     <div class="chat-modal-body">
+      <!-- Search bar -->
       <div class="modal-field">
-        <label>Tìm mã yêu cầu hoặc IMEI</label>
-        <input id="chatSearchInput" type="text" placeholder="Nhập mã yêu cầu hoặc IMEI..." style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;">
-        <div id="chatSearchResults" class="chat-search-results"></div>
+        <label style="font-size:12px;font-weight:700;color:#334155;">Tìm phiếu (mã YCSC / IMEI / tên hàng)</label>
+        <input id="assignSearchInput" type="text" placeholder="Gõ để lọc trong danh sách bên dưới..." style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;margin-top:6px;">
       </div>
 
-      <div id="chatSelectedTickets" class="chat-selected-tickets"></div>
+      <!-- Counter + danh sách phiếu chưa hoàn thành -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 6px;">
+        <div style="font-size:12px;font-weight:700;color:#334155;">
+          Phiếu chưa hoàn thành <span id="assignCount" style="color:#64748b;font-weight:600;">(0)</span>
+        </div>
+        <div style="font-size:12px;color:#2563eb;font-weight:700;">
+          Đã chọn: <span id="assignSelectedCount">0</span>
+        </div>
+      </div>
+      <div id="assignTicketList" style="max-height:280px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;"></div>
 
+      <!-- Người nhận -->
       <div class="modal-field" style="margin-top:16px">
-        <label>Ghi chú</label>
-        <textarea id="chatNote" rows="4" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit;" placeholder="Nhập ghi chú..."></textarea>
+        <label style="font-size:12px;font-weight:700;color:#334155;">Người nhận giao việc</label>
+        <select id="assignAssignee" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit;margin-top:6px;">
+          <option value="">-- Chọn người nhận --</option>
+        </select>
       </div>
 
-      <button id="chatSendBtn" class="primary-btn" style="width:100%;margin-top:16px">Gửi yêu cầu</button>
+      <!-- Ghi chú -->
+      <div class="modal-field" style="margin-top:12px">
+        <label style="font-size:12px;font-weight:700;color:#334155;">Ghi chú</label>
+        <textarea id="assignNote" rows="3" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit;margin-top:6px;" placeholder="Nội dung giao việc (tuỳ chọn)..."></textarea>
+      </div>
+
+      <button id="assignSendBtn" class="support-submit-btn" style="width:100%;margin-top:14px;">Gửi giao việc</button>
     </div>
   </div>
 </div>
@@ -1988,12 +2239,17 @@ function esc(s) {
 </div>
 
 <script>
-// Chat functionality
-const chatState = { selectedTickets: [], searchTimeout: null };
-
-document.getElementById('chatBubble').onclick = () => {
-  document.getElementById('chatModal').classList.add('open');
+// ================================================================
+//  GIAO VIỆC (Assign tickets)
+// ================================================================
+const assignState = {
+  selectedKeys: new Set(),     // 'sheetName||maYeuCau'
+  filterKeyword: '',
+  assignees: [],
+  loadedAssignees: false,
 };
+
+document.getElementById('chatBubble').onclick = openAssignModal;
 
 document.getElementById('closeChatModal').onclick = () => {
   document.getElementById('chatModal').classList.remove('open');
@@ -2005,105 +2261,157 @@ document.getElementById('chatModal').onclick = (e) => {
   }
 };
 
-document.getElementById('chatSearchInput').oninput = (e) => {
-  const q = e.target.value.trim();
-  clearTimeout(chatState.searchTimeout);
-  if (!q) {
-    document.getElementById('chatSearchResults').innerHTML = '';
-    return;
-  }
-  chatState.searchTimeout = setTimeout(() => searchAllTickets(q), 300);
+document.getElementById('assignSearchInput').oninput = (e) => {
+  assignState.filterKeyword = e.target.value.trim();
+  renderAssignTicketList();
 };
 
-async function searchAllTickets(q) {
+async function openAssignModal() {
+  document.getElementById('chatModal').classList.add('open');
+  document.getElementById('assignSearchInput').value = '';
+  document.getElementById('assignNote').value = '';
+  assignState.selectedKeys.clear();
+  assignState.filterKeyword = '';
+  renderAssignTicketList();
+  if (!assignState.loadedAssignees) {
+    await loadAssignees();
+  }
+}
+
+async function loadAssignees() {
   try {
-    const res = await apiCall('suggest', { q: q });
-    console.log('Search result:', res);
-    renderChatSearchResults(res);
+    const list = await apiCall('getAssignees');
+    assignState.assignees = Array.isArray(list) ? list : [];
+    assignState.loadedAssignees = true;
+    const sel = document.getElementById('assignAssignee');
+    sel.innerHTML = '<option value="">-- Chọn người nhận --</option>' +
+      assignState.assignees.map(a =>
+        `<option value="${esc(a.name)}" data-openid="${esc(a.openId || '')}">${esc(a.name)}${a.openId ? '' : ' (chưa có ID)'}</option>`
+      ).join('');
   } catch (err) {
-    console.error('Search error:', err);
-    document.getElementById('chatSearchResults').innerHTML = '<div style="padding:8px;color:#dc2626">Lỗi tìm kiếm</div>';
+    showToast('Lỗi tải người nhận: ' + err.message);
   }
 }
 
-function renderChatSearchResults(tickets) {
-  const el = document.getElementById('chatSearchResults');
-  if (!tickets || tickets.length === 0) {
-    el.innerHTML = '<div style="padding:8px;color:#64748b">Không tìm thấy</div>';
+// Lấy tất cả phiếu chưa hoàn thành (mọi sheet) — sort cũ → mới
+function getUnfinishedTickets() {
+  const all = [];
+  SHEETS.forEach(s => {
+    (allDataCache[s.name] || []).forEach(p => {
+      if (!p.maYeuCau) return;
+      let isDone = false;
+      if (p.sheetName === 'Kho thu cũ' || p.sheetName === 'Kho nhập hàng') {
+        isDone = !!p.hoanThanh;
+      } else if (p.sheetName === 'Kho bảo hành') {
+        isDone = String(p.trangThaiChinh || '').trim().toLowerCase() === 'hoàn thành';
+      } else {
+        // CNTT / CN141
+        const st = String(p.trangThaiChinh || '').trim();
+        isDone = (st === 'Sửa chữa xong' || st === 'Đã trả khách');
+      }
+      if (!isDone) all.push(p);
+    });
+  });
+  // Cũ nhất trước
+  all.sort((a, b) => {
+    const ta = a.thoiGianTao ? new Date(a.thoiGianTao).getTime() : 0;
+    const tb = b.thoiGianTao ? new Date(b.thoiGianTao).getTime() : 0;
+    return ta - tb;
+  });
+  return all;
+}
+
+function renderAssignTicketList() {
+  const wrap = document.getElementById('assignTicketList');
+  let data = getUnfinishedTickets();
+  const q = normalizeKeyword(assignState.filterKeyword);
+  if (q) {
+    data = data.filter(p =>
+      normalizeKeyword(p.maYeuCau).includes(q) ||
+      normalizeKeyword(p.tenHangSuaChua).includes(q) ||
+      normalizeKeyword(p.imei).includes(q)
+    );
+  }
+
+  document.getElementById('assignCount').textContent = '(' + data.length + ')';
+  document.getElementById('assignSelectedCount').textContent = assignState.selectedKeys.size;
+
+  if (!data.length) {
+    wrap.innerHTML = '<div style="padding:18px;text-align:center;color:#64748b;font-size:13px;">Không có phiếu phù hợp</div>';
     return;
   }
-  el.innerHTML = tickets.map(t => `
-    <div class="chat-search-item" onclick='addChatTicket(${JSON.stringify({
-      sheetName: t.sheetName || '',
-      thoiGianTao: t.thoiGianTao || '',
-      maYeuCau: t.maYeuCau || '',
-      tenHangSuaChua: t.tenHangSuaChua || '',
-      imei: t.imei || '',
-      trangThai: t.trangThai || '',
-      khachHang: t.khachHang || '',
-      sdt: t.sdt || ''
-    }).replace(/'/g, "&apos;")})'>
-      <div style="font-weight:600">${esc(t.maYeuCau)} - ${esc(t.tenHangSuaChua)}</div>
-      <div style="font-size:12px;color:#64748b">${esc(t.sheetName)} • IMEI: ${esc(t.imei)}</div>
-    </div>
-  `).join('');
+
+  // Giới hạn 200 dòng để khỏi nặng DOM
+  const list = data.slice(0, 200);
+  wrap.innerHTML = list.map(p => {
+    const key = p.sheetName + '||' + p.maYeuCau;
+    const checked = assignState.selectedKeys.has(key) ? 'checked' : '';
+    const tg = p.thoiGianTao ? formatDateShort(p.thoiGianTao) : '';
+    return `
+      <label class="assign-item" style="display:flex;gap:10px;padding:10px 12px;border-bottom:1px solid #e2e8f0;cursor:pointer;align-items:flex-start;background:#fff;">
+        <input type="checkbox" data-key="${esc(key)}" ${checked} onchange="toggleAssignTicket(this)" style="margin-top:3px;flex-shrink:0;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:13px;">${esc(p.maYeuCau)}</div>
+          <div style="font-size:12px;color:#475569;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.tenHangSuaChua || '')}</div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px;">
+            ${esc(tg)} · ${esc(p.sheetName)}${p.imei ? ' · IMEI: ' + esc(p.imei) : ''}
+          </div>
+        </div>
+      </label>
+    `;
+  }).join('') + (data.length > 200 ? `<div style="padding:8px;text-align:center;color:#64748b;font-size:12px;">Hiển thị 200/${data.length} — gõ vào ô tìm kiếm để lọc</div>` : '');
 }
 
-function addChatTicket(ticket) {
-  if (chatState.selectedTickets.find(t => t.maYeuCau === ticket.maYeuCau)) return;
-  chatState.selectedTickets.push(ticket);
-  renderChatSelectedTickets();
-  document.getElementById('chatSearchInput').value = '';
-  document.getElementById('chatSearchResults').innerHTML = '';
+function toggleAssignTicket(cb) {
+  const key = cb.dataset.key;
+  if (cb.checked) assignState.selectedKeys.add(key);
+  else assignState.selectedKeys.delete(key);
+  document.getElementById('assignSelectedCount').textContent = assignState.selectedKeys.size;
 }
 
-function removeChatTicket(maYeuCau) {
-  chatState.selectedTickets = chatState.selectedTickets.filter(t => t.maYeuCau !== maYeuCau);
-  renderChatSelectedTickets();
-}
-
-function renderChatSelectedTickets() {
-  const el = document.getElementById('chatSelectedTickets');
-  if (chatState.selectedTickets.length === 0) {
-    el.innerHTML = '';
-    return;
-  }
-  el.innerHTML = chatState.selectedTickets.map(t => `
-    <div class="chat-ticket-box">
-      <button class="chat-ticket-remove" onclick="removeChatTicket('${esc(t.maYeuCau)}')">×</button>
-      <div class="chat-ticket-info">
-        <div><strong>Mã YC:</strong> ${esc(t.maYeuCau)}</div>
-        <div><strong>Tên hàng:</strong> ${esc(t.tenHangSuaChua)}</div>
-        <div><strong>IMEI:</strong> ${esc(t.imei)}</div>
-        <div><strong>Trạng thái:</strong> ${esc(t.trangThai)}</div>
-        <div><strong>Khách hàng:</strong> ${esc(t.khachHang)} - ${esc(t.sdt)}</div>
-        <div><strong>Kho:</strong> ${esc(t.sheetName)}</div>
-      </div>
-    </div>
-  `).join('');
-}
-
-document.getElementById('chatSendBtn').onclick = async () => {
-  if (chatState.selectedTickets.length === 0) {
+document.getElementById('assignSendBtn').onclick = async () => {
+  if (assignState.selectedKeys.size === 0) {
     showToast('Vui lòng chọn ít nhất 1 phiếu');
     return;
   }
+  const sel = document.getElementById('assignAssignee');
+  const assigneeName = sel.value.trim();
+  if (!assigneeName) {
+    showToast('Vui lòng chọn người nhận');
+    return;
+  }
+  const opt = sel.options[sel.selectedIndex];
+  const assigneeOpenId = opt ? (opt.dataset.openid || '') : '';
+  const note = document.getElementById('assignNote').value.trim();
 
-  const note = document.getElementById('chatNote').value.trim();
+  // Build danh sách phiếu chỉ chứa 3 trường cần
+  const tickets = [];
+  assignState.selectedKeys.forEach(key => {
+    const [sheetName, maYeuCau] = key.split('||');
+    const p = (allDataCache[sheetName] || []).find(x => x.maYeuCau === maYeuCau);
+    if (!p) return;
+    tickets.push({
+      maYeuCau: p.maYeuCau,
+      imei: p.imei || '',
+      tenHangSuaChua: p.tenHangSuaChua || '',
+    });
+  });
+
+  const btn = document.getElementById('assignSendBtn');
+  btn.disabled = true;
+  btn.textContent = 'Đang gửi...';
 
   try {
-    const res = await apiPost('createInfoRequest', {
-      tickets: chatState.selectedTickets,
-      note: note
-    });
-
-    showToast('Đã gửi yêu cầu thành công!');
-    chatState.selectedTickets = [];
-    document.getElementById('chatNote').value = '';
-    renderChatSelectedTickets();
+    await apiPost('assignTickets', { tickets, assigneeName, assigneeOpenId, note });
+    showToast('Đã gửi giao việc lên Lark!');
+    assignState.selectedKeys.clear();
+    document.getElementById('assignNote').value = '';
     document.getElementById('chatModal').classList.remove('open');
   } catch (err) {
     showToast('Lỗi: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Gửi giao việc';
   }
 };
 
