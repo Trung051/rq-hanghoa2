@@ -855,6 +855,60 @@ body { min-height: 100vh; }
   color: #fff;
 }
 
+/* ── Mua linh kiện ── */
+.buy-parts-actions { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.buy-parts-btn { flex: 1; min-width: 160px; border: none; border-radius: var(--radius-sm); padding: 14px; font-size: 14px; font-weight: 800; cursor: pointer; transition: all .18s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.buy-parts-btn-primary { background: var(--primary-2); color: #fff; box-shadow: 0 4px 14px rgba(37,99,235,.25); }
+.buy-parts-btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); }
+.buy-parts-btn-secondary { background: #fff; color: var(--primary-2); border: 2px solid var(--primary-2); }
+.buy-parts-btn-secondary:hover { background: var(--primary-soft); }
+.buy-parts-btn-order { background: #f59e0b; color: #fff; box-shadow: 0 4px 14px rgba(245,158,11,.25); }
+.buy-parts-btn-order:hover { background: #d97706; transform: translateY(-1px); }
+.buy-parts-table-wrap { overflow-x: auto; background: #fff; border-radius: var(--radius-sm); box-shadow: var(--shadow); border: 1px solid var(--line); }
+.buy-parts-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.buy-parts-table th { background: #f8fafc; padding: 10px 12px; text-align: left; font-weight: 700; font-size: 11px; text-transform: uppercase; color: var(--muted); border-bottom: 2px solid var(--line); white-space: nowrap; }
+.buy-parts-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+.buy-parts-table tr:last-child td { border-bottom: none; }
+.buy-parts-table tr:hover td { background: #f8fafc; }
+.buy-parts-status { display: inline-block; border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 700; }
+.buy-parts-status-cho { background: #fffbeb; color: #b45309; }
+.buy-parts-status-dang { background: #eff6ff; color: #2563eb; }
+.buy-parts-status-nhan { background: #f0fdf4; color: #16a34a; }
+.buy-parts-status-huy { background: #fef2f2; color: #dc2626; }
+.buy-parts-ycsc-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.buy-parts-ycsc-tag { background: var(--primary-soft); color: var(--primary-2); border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; cursor: pointer; }
+.buy-parts-ycsc-tag:hover { background: #dbeafe; }
+.buy-parts-empty { padding: 32px; text-align: center; color: var(--muted); }
+.buy-parts-action-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #16a34a;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+}
+.buy-parts-action-btn:hover {
+  background: #15803d;
+}
+
+/* ── YCSC search in modal ── */
+.ycsc-search-wrap { position: relative; margin-bottom: 8px; }
+.ycsc-search-input { width: 100%; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; font-family: inherit; outline: none; background: #fff; color: var(--text); }
+.ycsc-search-input:focus { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+.ycsc-search-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid var(--line); border-radius: var(--radius-sm); box-shadow: var(--shadow-lg); max-height: 220px; overflow-y: auto; z-index: 50; display: none; }
+.ycsc-search-dropdown.show { display: block; }
+.ycsc-search-item { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px; }
+.ycsc-search-item:last-child { border-bottom: none; }
+.ycsc-search-item:hover { background: #f8fafc; }
+.ycsc-search-item input { margin: 0; }
+.ycsc-selected-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ycsc-selected-tag { display: inline-flex; align-items: center; gap: 4px; background: var(--primary-soft); color: var(--primary-2); border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 600; }
+.ycsc-selected-tag button { background: none; border: none; color: var(--primary-2); cursor: pointer; font-size: 16px; line-height: 1; padding: 0; }
+.ycsc-selected-tag button:hover { color: var(--danger); }
+
 </style>
 </head>
 <body>
@@ -923,6 +977,19 @@ body { min-height: 100vh; }
     <p>Không tìm thấy phiếu yêu cầu nào phù hợp.</p>
   </div>
 
+<!-- Mua linh kiện Modal -->
+<div id="muaLKModal" class="modal-overlay">
+  <div class="modal-box" style="max-width:960px;max-height:90vh;overflow-y:auto;">
+    <div class="modal-header">
+      <h2 id="buyPartsModalTitle">Mua linh kiện</h2>
+      <div class="modal-title-actions">
+        <button class="modal-close" id="muaLKModalClose">&times;</button>
+      </div>
+    </div>
+    <div class="modal-body" id="buyPartsModalBody"></div>
+  </div>
+</div>
+
 </main>
 
 <!-- Modal chi tiết -->
@@ -947,11 +1014,12 @@ body { min-height: 100vh; }
 //  CONFIG
 // ================================================================
 const SHEETS = [
-  { name: 'CNTT', label: 'CNTT' },
+  { name: 'CN45', label: 'CN45' },
   { name: 'CN141', label: 'CN141' },
   { name: 'Kho bảo hành', label: 'Kho bảo hành' },
   { name: 'Kho thu cũ', label: 'Kho thu cũ' },
   { name: 'Kho nhập hàng', label: 'Kho nhập hàng' },
+  { name: 'MuaLinhKien', label: 'Mua linh kiện' },
 ];
 
 const NOI_XU_LY_OPTIONS = [
@@ -975,58 +1043,114 @@ const NOI_XU_LY_OPTIONS = [
 ];
 
 const TRANG_THAI_BY_SHEET = {
-  'CNTT': [
-    'Chưa xử lý',
-    'Sửa chữa xong',
-    'Đang sửa chữa',
-    'Báo chưa xong',
-    'Đã trả khách',
-    'Chờ trả khách',
-    'Đang kiểm tra',
-    'Chờ khách đồng ý báo giá',
-    'Chờ',
-  ],
-  'CN141': [
-    'Chưa xử lý',
-    'Sửa chữa xong',
-    'Đang sửa chữa',
-    'Báo chưa xong',
-    'Đã trả khách',
-    'Chờ trả khách',
-    'Đang kiểm tra',
-    'Chờ khách đồng ý báo giá',
-    'Chờ',
-  ],
-  'Kho bảo hành': [
-    'Đang xử lý',
-    'Không lỗi',
-    'NCC bảo hành',
-    'NCC đổi máy/Trả máy trừ CN',
-    'Bán lại',
-    'Đổi trả hàng',
-    'Quản lý duyệt',
-    'Hoàn Thành',
-    'Lên dư YCSC',
-    'NCC LK bảo hành',
-    'Từ chối bảo hành',
-    'Khác',
-  ],
-  'Kho thu cũ': [
-    'Đang xử lý',
-    'Hoàn thành',
-  ],
-  'Kho nhập hàng': [
-    'Đang xử lý',
-    'Hoàn thành',
-  ],
-  'DEFAULT': [
-    'Chờ xử lý',
-    'Đang xử lý',
-    'Hoàn thành',
-    'Đã hủy',
-    'Từ chối',
-    'Đã báo giá',
-  ],
+  'CN45': {
+    primary: [
+      'Chưa xử lý',
+      'Sửa chữa xong',
+      'Đang sửa chữa',
+      'Báo chưa xong',
+      'Đã trả khách',
+      'Chờ trả khách',
+      'Đang kiểm tra',
+      'Chờ khách đồng ý báo giá',
+      'Chờ',
+    ],
+    secondary: [
+      'Đang sửa chữa',
+      'Sửa chữa xong',
+      'Đã trả khách',
+      'Chờ trả khách',
+      'Đang kiểm tra',
+      'Chờ khách đồng ý báo giá',
+    ],
+  },
+  'CN141': {
+    primary: [
+      'Chưa xử lý',
+      'Sửa chữa xong',
+      'Đang sửa chữa',
+      'Báo chưa xong',
+      'Đã trả khách',
+      'Chờ trả khách',
+      'Đang kiểm tra',
+      'Chờ khách đồng ý báo giá',
+      'Chờ',
+    ],
+    secondary: [
+      'Đang sửa chữa',
+      'Sửa chữa xong',
+      'Đã trả khách',
+      'Chờ trả khách',
+      'Đang kiểm tra',
+      'Chờ khách đồng ý báo giá',
+    ],
+  },
+  'Kho bảo hành': {
+    primary: [
+      'Đang xử lý',
+      'Không lỗi',
+      'NCC bảo hành',
+      'NCC đổi máy/Trả máy trừ CN',
+      'Bán lại',
+      'Đổi trả hàng',
+      'Quản lý duyệt',
+      'Hoàn Thành',
+      'Lên dư YCSC',
+      'NCC LK bảo hành',
+      'Từ chối bảo hành',
+      'Khác',
+    ],
+    secondary: [
+      'Nhận máy',
+      'Kiểm tra',
+      'Sửa chữa',
+      'Sửa chữa xong',
+      'Chờ trả khách',
+      'Hoàn thành',
+    ],
+  },
+  'Kho thu cũ': {
+    primary: [
+      'Đang xử lý',
+      'Hoàn thành',
+    ],
+    secondary: [
+      'Hoàn thành',
+      'Đang xử lý',
+    ],
+  },
+  'Kho nhập hàng': {
+    primary: [
+      'Đang xử lý',
+      'Hoàn thành',
+    ],
+    secondary: [
+      'Chưa xử lý',
+      'Đang kiểm tra',
+      'Đã báo giá',
+      'Đã nhận cọc',
+      'Hoàn thành',
+      'Khác',
+    ],
+  },
+  'DEFAULT': {
+    primary: [
+      'Chờ xử lý',
+      'Đang xử lý',
+      'Hoàn thành',
+      'Đã hủy',
+      'Từ chối',
+      'Đã báo giá',
+    ],
+    secondary: [
+      'Chờ xử lý',
+      'Đang xử lý',
+      'Hoàn thành',
+      'Đã hủy',
+      'Từ chối',
+      'Đã báo giá',
+    ],
+  },
 };
 
 const TRANG_THAI_COLORS = {
@@ -1094,6 +1218,12 @@ function bindEvents() {
     currentView = btn.dataset.view || 'ycsc';
     currentSheet = btn.dataset.sheet || '';
     updateStatusOptions();
+    if (currentSheet === 'MuaLinhKien') {
+      currentView = 'buyParts';
+      currentSheet = '';
+      showBuyPartsView();
+      return;
+    }
     if (currentView === 'support') {
       loadSupportRequests();
     } else if (currentView === 'assigned') {
@@ -1160,7 +1290,7 @@ function bindEvents() {
 //  API CALLS
 // ================================================================
 window.APP_CONFIG = window.APP_CONFIG || {
-  API_BASE_URL: 'https://script.google.com/macros/s/AKfycbzkY9qy4GwJ_Ye7HeskxPQvbL4utqtNYeoHYIUH6vg_k3bG7Vrbg1e2ZWxW7DOYehyM/exec'
+  API_BASE_URL: 'https://script.google.com/macros/s/AKfycbzykQ-wOA6RKifHcIHhZfQ_o6ZfBG5dZ6srFwx8w4_NE1muHKIuiQu-nRjIS7PnaPIM/exec'
 };
 
 const API_BASE = window.APP_CONFIG.API_BASE_URL || '';
@@ -1200,12 +1330,13 @@ let allDataCache = {};
 async function loadAllSheetsData() {
   showLoading(true);
   try {
+    apiCall('hideColumnH').catch(() => {});
     const results = await Promise.all(
       SHEETS.map(s => apiCall('list', { sheet: s.name, limit: 5000 }))
     );
     allDataCache = {};
     SHEETS.forEach((s, i) => {
-      allDataCache[s.name] = results[i] || [];
+      allDataCache[s.name] = (results[i] && results[i].data) || [];
     });
     updateTabCounts();
     applyFilters();
@@ -1295,7 +1426,7 @@ function getFilteredData() {
     return tb - ta;
   });
 
-  if (currentSheet === 'CNTT' || currentSheet === 'CN141') {
+  if (currentSheet === 'CN45' || currentSheet === 'CN141') {
     const nowTime = new Date().getTime();
     data.sort((a, b) => {
       const sa = a.trangThaiChinh || 'Chưa xử lý';
@@ -1327,6 +1458,9 @@ function applyFilters() {
     loadAssignedTickets();
     return;
   }
+  document.getElementById('searchWrap').classList.remove('hidden');
+  document.getElementById('filterRow').classList.remove('hidden');
+  document.getElementById('kpiToggle').parentElement.classList.remove('hidden');
   document.getElementById('emptyState').textContent = 'Không có phiếu phù hợp';
   const dateFiltered = getDateFilteredData();
   const filtered = getFilteredData();
@@ -1384,10 +1518,8 @@ function getDateFilteredData() {
 
 function updateStatusOptions() {
   const selected = getSelectedStatuses();
-  let statusList = TRANG_THAI_BY_SHEET.DEFAULT;
-  if (TRANG_THAI_BY_SHEET[currentSheet]) {
-    statusList = TRANG_THAI_BY_SHEET[currentSheet] || TRANG_THAI_BY_SHEET.DEFAULT;
-  }
+	const config = TRANG_THAI_BY_SHEET[currentSheet] || TRANG_THAI_BY_SHEET.DEFAULT;
+		const statusList = config.primary || [];
   const menu = document.getElementById('filterStatusMenu');
   menu.innerHTML = statusList.map(s => {
     const checked = selected.includes(s);
@@ -1437,6 +1569,20 @@ function clearFilters() {
 // ================================================================
 //  RENDER KPI
 // ================================================================
+function getStatusBadgeClass(status) {
+  return TRANG_THAI_COLORS[status] || 'badge-gray';
+}
+
+function getSecondaryStatusBySheet(sheetName, phieu) {
+  const config = TRANG_THAI_BY_SHEET[sheetName] || TRANG_THAI_BY_SHEET.DEFAULT;
+  const raw = String(phieu?.trangThaiPhu || '').trim();
+  if (raw) return raw;
+  if (sheetName === 'Kho thu cũ' || sheetName === 'Kho nhập hàng') {
+    return phieu?.hoanThanh ? 'Hoàn thành' : 'Đang xử lý';
+  }
+  return '';
+}
+
 function renderKPI(data) {
   const total = data.length;
   const now = new Date();
@@ -1529,13 +1675,15 @@ function renderTickets(data) {
 
   const nowTime = new Date().getTime();
   wrap.innerHTML = pageData.map(p => {
-    let status, badgeClass;
+    let statusPrimary, statusSecondary, badgeClass;
     if (p.sheetName === 'Kho thu cũ' || p.sheetName === 'Kho nhập hàng') {
-      status = p.hoanThanh ? 'Hoàn thành' : 'Đang xử lý';
+      statusPrimary = p.hoanThanh ? 'Hoàn thành' : 'Đang xử lý';
+      statusSecondary = p.trangThaiPhu || '';
       badgeClass = p.hoanThanh ? 'badge-green' : 'badge-blue';
     } else {
-      status = p.trangThaiChinh || 'Chưa xử lý';
-      badgeClass = TRANG_THAI_COLORS[status] || 'badge-gray';
+      statusPrimary = p.trangThaiChinh || 'Chưa xử lý';
+      statusSecondary = getSecondaryStatusBySheet(p.sheetName, p);
+      badgeClass = getStatusBadgeClass(statusPrimary);
     }
     const tg = p.thoiGianTao ? formatDateShort(p.thoiGianTao) : '';
     const isOverdue = !p.trangThaiChinh && p.thoiGianTao && ((nowTime - new Date(p.thoiGianTao).getTime()) / 86400000 > 5);
@@ -1545,14 +1693,16 @@ function renderTickets(data) {
         <div class="ticket-left">
           <div class="ticket-ma">${esc(p.maYeuCau)}</div>
           <div class="ticket-ten">${esc(p.tenHangSuaChua)}</div>
+${p.ghiChuYCSC ? '<div class="ticket-meta" style="margin-top:2px;"><span style="color:#64748b;font-size:12px;">- ' + esc(p.ghiChuYCSC) + '</span></div>' : ''}
           <div class="ticket-meta">
             <span>${esc(tg)}</span>
             <span>&#183;</span>
             <span>${esc(p.sheetName)}</span>
           </div>
         </div>
-        <div class="ticket-right">
-          <span class="badge ${badgeClass}">${esc(status)}</span>
+        <div class="ticket-right" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+          <span class="badge ${badgeClass}">${esc(statusPrimary)}</span>
+          ${statusSecondary ? `<span class="badge badge-gray" style="font-size:10px;opacity:.9;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(statusSecondary)}</span>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -1710,7 +1860,7 @@ function renderAssignedTickets(data) {
     const badgeText = isDone ? 'Hoàn thành' : 'Đang xử lý';
     const completeBtn = isDone
       ? `<div style="font-size:11px;color:#16a34a;font-weight:700;margin-top:4px;">🕒 ${esc(r.thoiGianHoanThanh || '')}</div>`
-      : `<button class="assigned-complete-btn" onclick="event.stopPropagation();completeAssignedTicket('${esc(r.id)}')">✓ Hoàn thành</button>`;
+      : `<button class="assigned-complete-btn" onclick="event.stopPropagation();completeAssignedTicket('${esc(r.id)}')"> Hoàn thành</button>`;
     return `
       <div class="ticket-card">
         <div class="ticket-left">
@@ -1846,6 +1996,28 @@ async function completeSupportRequest(maPhieu) {
 // ================================================================
 //  SEARCH SUGGEST
 // ================================================================
+
+function doSuggestLocal(q, dropdownId, renderFn) {
+  const qNorm = normalizeKeyword(q);
+  let results = [];
+  SHEETS.forEach(function(s) {
+    (allDataCache[s.name] || []).forEach(function(p) {
+      if (!p.maYeuCau) return;
+      var maNorm = normalizeKeyword(p.maYeuCau);
+      var tenNorm = normalizeKeyword(p.tenHangSuaChua);
+      var imeiNorm = normalizeKeyword(p.imei);
+      if (maNorm.indexOf(qNorm) > -1 || tenNorm.indexOf(qNorm) > -1 || imeiNorm.indexOf(qNorm) > -1) {
+        results.push({ maYeuCau: p.maYeuCau, tenHangSuaChua: p.tenHangSuaChua, imei: p.imei, sheetName: p.sheetName, trangThai: p.trangThaiChinh, ghiChuYCSC: p.ghiChuYCSC });
+      }
+    });
+  });
+  results.sort(function(a, b) {
+    return (normalizeKeyword(a.maYeuCau).indexOf(qNorm) === 0 ? 1 : 0) - (normalizeKeyword(b.maYeuCau).indexOf(qNorm) === 0 ? 1 : 0);
+  });
+  results = results.slice(0, 15);
+  renderFn(results);
+}
+
 function doSuggest(q) {
   // Client-side suggest
   const qNorm = normalizeKeyword(q);
@@ -1905,7 +2077,16 @@ async function openDetail(sheetName, maYeuCau) {
   hideSearchDropdown();
   document.getElementById('searchInput').value = '';
 
-  let phieu = (allDataCache[sheetName] || []).find(p => p.maYeuCau === maYeuCau);
+  if (!sheetName || !maYeuCau) {
+    showToast('Thiếu thông tin phiếu');
+    return;
+  }
+  var cache = allDataCache[sheetName];
+  if (!cache) {
+    showToast('Không tìm thấy dữ liệu kho: ' + sheetName);
+    return;
+  }
+  var phieu = cache.find(function(p) { return p.maYeuCau === maYeuCau; });
   if (!phieu) {
     showToast('Không tìm thấy phiếu');
     return;
@@ -1918,8 +2099,10 @@ async function openDetail(sheetName, maYeuCau) {
   statusBadge.textContent = phieu.trangThaiChinh || 'Chưa xử lý';
   statusBadge.className = 'badge ' + badgeClass;
 
-  const statusList = TRANG_THAI_BY_SHEET[phieu.sheetName] || TRANG_THAI_BY_SHEET.DEFAULT;
+  const statusConfig = TRANG_THAI_BY_SHEET[phieu.sheetName] || TRANG_THAI_BY_SHEET.DEFAULT;
+  const secondaryStatusList = statusConfig.secondary || TRANG_THAI_BY_SHEET.DEFAULT.secondary;
   const currentStatus = phieu.trangThaiChinh || 'Chưa xử lý';
+  const currentSecondaryStatus = phieu.trangThaiPhu || '';
 
   const body = `
     <div class="modal-section">
@@ -1939,41 +2122,25 @@ async function openDetail(sheetName, maYeuCau) {
            <div class="modal-field"><span class="modal-field-label">Trạng thái</span><span class="modal-field-value">${phieu.hoanThanh ? 'Hoàn thành' : 'Đang xử lý'}</span></div>
            ${phieu.thoiGianHoanThanh ? `<div class="modal-field"><span class="modal-field-label">Thời gian hoàn thành</span><span class="modal-field-value">${esc(formatDateShort(phieu.thoiGianHoanThanh))}</span></div>` : ''}`
         : ''}
-      ${(phieu.sheetName === 'CNTT' || phieu.sheetName === 'CN141')
+      ${(phieu.sheetName === 'CN45' || phieu.sheetName === 'CN141')
         ? `<div class="modal-field"><span class="modal-field-label">Ngày hoàn thành</span><span class="modal-field-value">${esc(phieu.completedAt || 'Chưa hoàn thành')}</span></div>
            <div class="modal-field"><span class="modal-field-label">Thời gian sửa chữa</span><span class="modal-field-value">${esc(phieu.repairTime ? phieu.repairTime + ' ngày' : 'Chưa hoàn thành')}</span></div>`
         : ''}
     </div>
 
-    <div class="modal-section">
-      <p class="modal-section-title">Chỉnh sửa</p>
+	    <div class="modal-section">
+	      <p class="modal-section-title">Chỉnh sửa</p>
 
-      <div class="edit-group">
-        <label class="edit-label">Tên linh kiện sửa chữa</label>
-        <input id="editLinhKien" class="edit-input" type="text" value="${esc(phieu.tenLinhKienSuaChua)}" ${(phieu.sheetName === 'CNTT' || phieu.sheetName === 'CN141') ? 'disabled' : ''}>
-      </div>
-
-      <div class="edit-group">
-        <label class="edit-label">Ghi chú báo giá khách</label>
-        <textarea id="editGhiChuBaoGia" class="edit-textarea" rows="2">${esc(phieu.ghiChuBaoGiaKhach)}</textarea>
-      </div>
-
-      <div class="edit-group">
-        <label class="edit-label">Kỹ thuật xử lý</label>
-        <textarea id="editKyThuat" class="edit-textarea" rows="2">${esc(phieu.kyThuatXuLy)}</textarea>
-      </div>
-
-      <div class="edit-group">
-        <label class="edit-label">Ghi chú</label>
-        <textarea id="editGhiChu" class="edit-textarea" rows="2">${esc(phieu.ghiChu)}</textarea>
-      </div>
-
-      ${(phieu.sheetName === 'Kho thu cũ' || phieu.sheetName === 'Kho nhập hàng')
+	      <div class="edit-group">
+	        <label class="edit-label">Ghi chú báo giá khách</label>
+	        <textarea id="editGhiChuBaoGia" class="edit-textarea" rows="2">${esc(phieu.ghiChuBaoGiaKhach)}</textarea>
+	      </div>
+      ${phieu.sheetName === 'Kho thu cũ'
         ? `<div class="edit-group">
-             <label class="edit-label">Nơi xử lý</label>
-             <select id="editNoiXuLy" class="edit-select">
-               <option value="">-- Chọn nơi xử lý --</option>
-               ${NOI_XU_LY_OPTIONS.map(o => `<option value="${esc(o)}"${o === phieu.noiXuLy ? ' selected' : ''}>${esc(o)}</option>`).join('')}
+             <label class="edit-label">Trạng thái cột I</label>
+             <select id="editTrangThaiI" class="edit-select">
+               <option value="">-- Chọn trạng thái --</option>
+               ${secondaryStatusList.map(o => `<option value="${esc(o)}"${o === currentSecondaryStatus ? ' selected' : ''}>${esc(o)}</option>`).join('')}
              </select>
            </div>
            <div class="edit-group">
@@ -1983,13 +2150,22 @@ async function openDetail(sheetName, maYeuCau) {
              </label>
            </div>`
         : ''}
+      ${phieu.sheetName === 'Kho nhập hàng'
+        ? `<div class="edit-group">
+             <label class="edit-label">Trạng thái cột I</label>
+             <select id="editTrangThaiI" class="edit-select">
+               <option value="">-- Chọn trạng thái --</option>
+               ${secondaryStatusList.map(o => `<option value="${esc(o)}"${o === currentSecondaryStatus ? ' selected' : ''}>${esc(o)}</option>`).join('')}
+             </select>
+           </div>`
+        : ''}
 
       ${(phieu.sheetName !== 'Kho thu cũ' && phieu.sheetName !== 'Kho nhập hàng')
         ? `<div class="edit-group">
-             <label class="edit-label">Trạng thái</label>
-             <select id="editTrangThai" class="edit-select">
+             <label class="edit-label">Trạng thái cột I</label>
+             <select id="editTrangThaiI" class="edit-select">
                <option value="">-- Chọn trạng thái --</option>
-               ${statusList.map(o => `<option value="${esc(o)}"${o === currentStatus ? ' selected' : ''}>${esc(o)}</option>`).join('')}
+               ${secondaryStatusList.map(o => `<option value="${esc(o)}"${o === currentSecondaryStatus ? ' selected' : ''}>${esc(o)}</option>`).join('')}
              </select>
            </div>`
         : ''}
@@ -2017,24 +2193,23 @@ async function savePhieu(sheetName, maYeuCau, rowIndex) {
   saveBtn.disabled = true;
   saveBtn.textContent = 'Đang lưu...';
 
+  const sel = document.getElementById('editTrangThaiI')?.value || '';
+
+  const ghiChuBaoGia = document.getElementById('editGhiChuBaoGia')?.value || '';
+
   const payload = {
     sheetName,
     maYeuCau,
     rowIndex,
+    trangThaiPhu: sel,
+    ghiChuBaoGiaKhach: ghiChuBaoGia,
   };
 
-  if (sheetName === 'Kho thu cũ' || sheetName === 'Kho nhập hàng') {
-    const noiXuLyEl = document.getElementById('editNoiXuLy');
-    if (noiXuLyEl) payload.noiXuLy = noiXuLyEl.value;
+  if (sheetName === 'Kho thu cũ') {
     const hoanThanhEl = document.getElementById('editHoanThanh');
     if (hoanThanhEl) payload.hoanThanh = hoanThanhEl.checked;
-    payload.ghiChu = document.getElementById('editGhiChu').value;
-  } else {
-    payload.tenLinhKienSuaChua = document.getElementById('editLinhKien').value;
-    payload.ghiChuBaoGiaKhach = document.getElementById('editGhiChuBaoGia').value;
-    payload.kyThuatXuLy = document.getElementById('editKyThuat').value;
-    payload.ghiChu = document.getElementById('editGhiChu').value;
-    payload.trangThaiChinh = document.getElementById('editTrangThai').value;
+  } else if (sheetName === 'Kho nhập hàng') {
+    payload.hoanThanh = (sel === 'Hoàn thành');
   }
 
   try {
@@ -2043,17 +2218,13 @@ async function savePhieu(sheetName, maYeuCau, rowIndex) {
     if (allDataCache[sheetName]) {
       const idx = allDataCache[sheetName].findIndex(p => p.maYeuCau === maYeuCau);
       if (idx > -1) {
-        Object.assign(allDataCache[sheetName][idx], payload);
-        if ((sheetName === 'Kho thu cũ' || sheetName === 'Kho nhập hàng') && payload.hoanThanh !== undefined) {
-          const now = new Date();
-          allDataCache[sheetName][idx].thoiGianHoanThanh = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
-        }
-        if ((sheetName === 'CNTT' || sheetName === 'CN141') && payload.trangThaiChinh === 'Sửa chữa xong' && !allDataCache[sheetName][idx].completedAt) {
-          const now = new Date();
-          const created = new Date(allDataCache[sheetName][idx].thoiGianTao).getTime();
-          allDataCache[sheetName][idx].completedAt = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
-          if (!isNaN(created)) {
-            allDataCache[sheetName][idx].repairTime = Math.floor((now.getTime() - created) / 86400000);
+        allDataCache[sheetName][idx].trangThaiPhu = sel;
+        allDataCache[sheetName][idx].ghiChuBaoGiaKhach = ghiChuBaoGia;
+        if (payload.hoanThanh !== undefined) {
+          allDataCache[sheetName][idx].hoanThanh = payload.hoanThanh;
+          if (payload.hoanThanh) {
+            const now = new Date();
+            allDataCache[sheetName][idx].thoiGianHoanThanh = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
           }
         }
       }
@@ -2141,9 +2312,585 @@ function normalizeKeyword(str) {
     .trim();
 }
 
+/**
+ * HTML escape - bảo vệ chống XSS
+ */
 function esc(s) {
-  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  if (s === null || s === undefined) return '';
+  const str = String(s);
+  const escapeMap = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+    '/': '&#x2F;',
+    '`': '&#x60;',
+    '=': '&#x3D;'
+  };
+  return str.replace(/[&<>"'/`=]/g, ch => escapeMap[ch] || ch);
 }
+
+/**
+ * JavaScript string escape - cho dynamic values trong JS
+ */
+function escJs(s) {
+  if (s === null || s === undefined) return '';
+  return JSON.stringify(String(s));
+}
+
+/**
+ * URL escape - cho query parameters
+ */
+function escUrl(s) {
+  if (s === null || s === undefined) return '';
+  return encodeURIComponent(String(s));
+}
+
+// ================================================================
+// MUA LINH KIEN
+// ================================================================
+let buyPartsData = [];
+let buyPartsSelectedYCSC = []; // [{maYeuCau, tenHangSuaChua, sheetName, rowIndex}]
+let buyPartsYCSCIndex = [];
+let buyPartsYCSCTimer = null;
+let buyPartsCurrentUser = '';
+
+async function loadBuyPartsCurrentUser() {
+  try {
+    if (buyPartsCurrentUser) return buyPartsCurrentUser;
+    const res = await apiCall('getCurrentUser');
+    buyPartsCurrentUser = (res && res.data && res.data.displayName) ? String(res.data.displayName).trim() : '';
+    return buyPartsCurrentUser;
+  } catch (err) {
+    console.error('loadBuyPartsCurrentUser error:', err);
+    return '';
+  }
+}
+
+function buildBuyPartsYCSCIndex() {
+  if (buyPartsYCSCIndex.length) return buyPartsYCSCIndex;
+  const index = [];
+  const seen = new Set();
+  SHEETS.forEach(s => {
+    const rows = allDataCache[s.name] || [];
+    rows.forEach((p, idx) => {
+      const ma = String(p.maYeuCau || '').trim();
+      if (!ma) return;
+      const key = ma + '||' + s.name + '||' + (p.rowIndex || idx);
+      if (seen.has(key)) return;
+      seen.add(key);
+      index.push({
+        maYeuCau: ma,
+        tenHangSuaChua: String(p.tenHangSuaChua || '').trim(),
+        imei: String(p.imei || '').trim(),
+        trangThai: String(p.trangThai || '').trim(),
+        sheetName: s.name,
+        rowIndex: p.rowIndex || (idx + 1),
+        maNorm: normalizeKeyword(ma),
+        maDigits: normalizeKeyword(ma).replace(/\D/g, ''),
+        tenNorm: normalizeKeyword(p.tenHangSuaChua || ''),
+        imeiNorm: normalizeKeyword(p.imei || '').replace(/\D/g, ''),
+      });
+    });
+  });
+  buyPartsYCSCIndex = index;
+  return buyPartsYCSCIndex;
+}
+
+function findBuyPartsYCSCLocal(q) {
+  const qNorm = normalizeKeyword(q);
+  const qDigits = qNorm.replace(/\D/g, '');
+  const index = buildBuyPartsYCSCIndex();
+  const matches = index.filter(r => {
+    if (!qNorm) return false;
+    if (r.maNorm === qNorm) return true;
+    if (r.maNorm.startsWith(qNorm)) return true;
+    if (qDigits && (r.maDigits === qDigits || r.maDigits.endsWith(qDigits) || r.maDigits.includes(qDigits))) return true;
+    if (!qDigits && r.maNorm.includes(qNorm)) return true;
+    return false;
+  });
+  matches.sort((a, b) => {
+    const score = (r) => {
+      if (r.maNorm === qNorm) return 300;
+      if (r.maNorm.startsWith(qNorm)) return 240;
+      if (qDigits && r.maDigits === qDigits) return 220;
+      if (qDigits && r.maDigits.endsWith(qDigits)) return 210;
+      if (qDigits && r.maDigits.includes(qDigits)) return 180;
+      return 100;
+    };
+    return score(b) - score(a) || a.maYeuCau.localeCompare(b.maYeuCau);
+  });
+  return matches.slice(0, 10);
+}
+
+function getBuyPartsStatusClass(status) {
+  const s = String(status || '').trim().toLowerCase();
+  if (s.includes('đang') || s.includes('mua')) return 'buy-parts-status-dang';
+  if (s.includes('nhận') || s.includes('hoàn') || s.includes('xong')) return 'buy-parts-status-nhan';
+  if (s.includes('hủy') || s.includes('từ chối')) return 'buy-parts-status-huy';
+  return 'buy-parts-status-cho';
+}
+
+function getBuyPartsStatusBadge(status) {
+  return '<span class="buy-parts-status ' + getBuyPartsStatusClass(status) + '">' + esc(status || 'Chờ mua') + '</span>';
+}
+
+function showBuyPartsView() {
+  document.getElementById('searchWrap').classList.add('hidden');
+  document.getElementById('filterRow').classList.add('hidden');
+  document.getElementById('kpiToggle').parentElement.classList.add('hidden');
+  const wrap = document.getElementById('ticketsWrap');
+  const empty = document.getElementById('emptyState');
+  const pager = document.getElementById('pagerWrap');
+  if (pager) { pager.classList.add('hidden'); pager.innerHTML = ''; }
+  buyPartsYCSCIndex = [];
+
+  wrap.innerHTML = `
+    <div class="buy-parts-actions">
+      <button class="buy-parts-btn buy-parts-btn-primary" onclick="openBuyPartsModal()">
+        <span>+</span> Mua hàng
+      </button>
+      <button class="buy-parts-btn buy-parts-btn-secondary" onclick="openReceiveModal()">
+        Nhận hàng
+      </button>
+    </div>
+    <div class="buy-parts-table-wrap">
+      <table class="buy-parts-table">
+        <thead>
+          <tr>
+            <th>Thời gian</th>
+            <th>YCSC</th>
+            <th>Kho</th>
+            <th>Model</th>
+            <th>Linh kiện</th>
+            <th>SL</th>
+            <th>NCC đề xuất</th>
+            <th>Người đề xuất</th>
+            <th>Ghi chú</th>
+            <th>Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody id="buyPartsTableBody">
+          <tr><td colspan="11" class="buy-parts-empty">Đang tải...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+  empty.classList.add('hidden');
+  wrap.classList.remove('hidden');
+  loadBuyPartsData();
+}
+
+async function loadBuyPartsData() {
+  try {
+    const res = await apiCall('listMuaLinhKien');
+    buyPartsData = Array.isArray(res) ? res : (res.data || []);
+    renderBuyPartsTable();
+  } catch (err) {
+    showToast('Lỗi tải dữ liệu mua linh kiện: ' + err.message);
+    const tbody = document.getElementById('buyPartsTableBody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="11" class="buy-parts-empty">Lỗi tải dữ liệu</td></tr>';
+  }
+}
+
+function renderBuyPartsTable() {
+  const tbody = document.getElementById('buyPartsTableBody');
+  if (!tbody) return;
+  if (!buyPartsData.length) {
+    tbody.innerHTML = '<tr><td colspan="11" class="buy-parts-empty">Chưa có yêu cầu mua linh kiện</td></tr>';
+    return;
+  }
+  // Group by maYeuCau để hiển thị YCSC tags
+  const grouped = {};
+  buyPartsData.forEach(row => {
+    const key = row.maYeuCau + '||' + row.rowIndex;
+    if (!grouped[key]) grouped[key] = { ...row, ycscList: [] };
+    grouped[key].ycscList.push(row.maYeuCau);
+  });
+  const rows = Object.values(grouped);
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td>${esc(r.thoiGianTao || '')}</td>
+      <td><div class="buy-parts-ycsc-tags">${r.ycscList.map(y => '<span class="buy-parts-ycsc-tag" onclick="openDetail(\'' + esc(r.sheetName || '') + '\',\'' + esc(y) + '\')">' + esc(y) + '</span>').join('')}</div></td>
+      <td>${esc(r.khoSuaChua || '')}</td>
+      <td>${esc(r.model || '')}</td>
+      <td>${esc(r.linhKienCanMua || '')}</td>
+      <td>${esc(r.soLuong || '')}</td>
+      <td>${esc(r.nccDeXuat || '')}</td>
+      <td>${esc(r.nguoiDeXuat || '')}</td>
+      <td>${esc(r.ghiChu || '')}</td>
+      <td>${getBuyPartsStatusBadge(r.trangThai)}</td>
+    </tr>
+  `).join('');
+}
+
+function openBuyPartsModal() {
+  document.getElementById('buyPartsModalTitle').textContent = 'Mua hàng';
+  document.getElementById('buyPartsModalBody').innerHTML = `
+    <div class="modal-section">
+      <p class="modal-section-title">YCSC</p>
+      <div class="ycsc-search-wrap">
+        <label class="edit-label">Mã YCSC (không bắt buộc)</label>
+        <input id="buyPartsYCSCSearch" class="ycsc-search-input" type="text" placeholder="Nhập mã YCSC để tìm và chọn, hoặc bỏ trống..." autocomplete="off">
+        <div id="buyPartsYCSCDropdown" class="ycsc-search-dropdown"></div>
+      </div>
+    </div>
+    <div class="modal-section">
+      <div class="edit-group">
+        <label class="edit-label">Kho sửa chữa</label>
+        <input id="buyPartsWarehouse" class="edit-input" type="text" placeholder="VD: CN45, CN141...">
+      </div>
+      <div class="edit-group">
+        <label class="edit-label">Model</label>
+        <input id="buyPartsModel" class="edit-input" type="text" placeholder="Model sản phẩm">
+      </div>
+      <div class="edit-group">
+        <label class="edit-label">Linh kiện cần mua</label>
+        <input id="buyPartsPartName" class="edit-input" type="text" placeholder="Tên linh kiện cần mua">
+      </div>
+      <div class="edit-group">
+        <label class="edit-label">Số lượng</label>
+        <input id="buyPartsQuantity" class="edit-input" type="number" value="1" min="1">
+      </div>
+      <div class="edit-group">
+        <label class="edit-label">NCC đề xuất</label>
+        <input id="buyPartsSupplier" class="edit-input" type="text" placeholder="Nhà cung cấp đề xuất">
+      </div>
+      <div class="edit-group">
+        <label class="edit-label">Người đề xuất</label>
+        <input id="buyPartsRequester" class="edit-input" type="text" placeholder="Tên người đề xuất">
+      </div>
+      <div class="edit-group">
+        <label class="edit-label">Ghi chú</label>
+        <textarea id="buyPartsNote" class="edit-textarea" rows="2" placeholder="Ghi chú thêm..."></textarea>
+      </div>
+    </div>
+    <button class="save-btn" id="buyPartsSubmitBtn" onclick="submitBuyParts()">Gửi yêu cầu mua hàng</button>
+  `;
+  document.getElementById('muaLKModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  loadBuyPartsCurrentUser().then((name) => {
+    const requesterInput = document.getElementById('buyPartsRequester');
+    if (requesterInput && !requesterInput.value.trim() && name) requesterInput.value = name;
+  });
+
+  buildBuyPartsYCSCIndex();
+
+  const searchInput = document.getElementById('buyPartsYCSCSearch');
+  const dropdown = document.getElementById('buyPartsYCSCDropdown');
+  const triggerYCSCSearch = (sourceValue) => {
+    clearTimeout(buyPartsYCSCTimer);
+    const q = String(sourceValue || '').trim();
+    if (searchInput) searchInput.value = q;
+    if (!dropdown) return;
+    if (q.length < 1) {
+      hideBuyPartsYCSCDropdown();
+      return;
+    }
+    const local = findBuyPartsYCSCLocal(q);
+    if (local.length) {
+      renderBuyPartsYCSCDropdown(local);
+      return;
+    }
+    buyPartsYCSCTimer = setTimeout(() => doBuyPartsYCSCSearch(q), 80);
+  };
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      searchInput.dataset.selectedYcsc = '';
+      triggerYCSCSearch(searchInput.value);
+    });
+    searchInput.addEventListener('blur', () => setTimeout(hideBuyPartsYCSCDropdown, 200));
+    searchInput.addEventListener('focus', () => {
+      const q = searchInput.value.trim();
+      if (q.length >= 1) triggerYCSCSearch(q);
+    });
+  }
+
+}
+
+let selectedReceiveYCSC = [];
+
+function openReceiveModal() {
+  selectedReceiveYCSC = [];
+  document.getElementById('buyPartsModalTitle').textContent = 'Nhận hàng YCSC';
+  document.getElementById('buyPartsModalBody').innerHTML = `
+    <div class="modal-section">
+      <p class="modal-section-title">Tìm YCSC</p>
+      <div class="ycsc-search-wrap">
+        <input id="receiveYCSCSearch" class="ycsc-search-input" type="text" placeholder="Nhập mã YCSC để tìm..." autocomplete="off">
+        <div id="receiveYCSCDropdown" class="ycsc-search-dropdown"></div>
+      </div>
+      <div id="receiveSelectedList" style="margin-top:8px;"></div>
+    </div>
+    <div class="modal-section" id="receiveFormSection" style="display:none;">
+      <p class="modal-section-title">Thông tin nhận hàng</p>
+      <div id="receiveFormFields"></div>
+      <button class="save-btn" id="receiveSubmitBtn" onclick="submitReceive()">Lưu nhận hàng</button>
+    </div>
+  `;
+  document.getElementById('muaLKModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  setTimeout(() => {
+    const searchInput = document.getElementById('receiveYCSCSearch');
+    if (searchInput) {
+      searchInput.addEventListener('input', function() {
+        const q = this.value.trim();
+        if (q.length >= 1) {
+          doSuggestLocal(q, 'receiveYCSCDropdown', renderReceiveYCSCDropdown);
+        } else {
+          document.getElementById('receiveYCSCDropdown').classList.remove('show');
+        }
+      });
+      searchInput.addEventListener('blur', () => setTimeout(() => {
+        const dd = document.getElementById('receiveYCSCDropdown');
+        if (dd) dd.classList.remove('show');
+      }, 200));
+      searchInput.addEventListener('focus', function() {
+        const q = this.value.trim();
+        if (q.length >= 1) doSuggestLocal(q, 'receiveYCSCDropdown', renderReceiveYCSCDropdown);
+      });
+    }
+  }, 100);
+}
+
+function renderReceiveYCSCDropdown(items) {
+  const dropdown = document.getElementById('receiveYCSCDropdown');
+  if (!dropdown) return;
+  if (!items || !items.length) {
+    dropdown.innerHTML = '<div class="suggest-empty">Không tìm thấy YCSC</div>';
+    dropdown.classList.add('show');
+    return;
+  }
+  dropdown.innerHTML = items.map(r => `
+    <div class="ycsc-search-item" onclick="addReceiveYCSC('${esc(r.maYeuCau)}','${esc(r.sheetName || '')}','${esc(r.tenHangSuaChua || '')}','${esc(r.ghiChuYCSC || '')}')">
+      <div>
+        <div style="font-weight:700;font-size:13px;">${esc(r.maYeuCau)}</div>
+        <div style="font-size:12px;color:#64748b;">${esc(r.tenHangSuaChua || '')}${r.imei ? ' · IMEI: ' + esc(r.imei) : ''}</div>
+      </div>
+      <span class="suggest-sheet" style="margin-left:auto;font-size:11px;color:var(--primary-2);font-weight:600;">${esc(r.sheetName || '')}</span>
+    </div>
+  `).join('');
+  dropdown.classList.add('show');
+}
+
+function addReceiveYCSC(maYeuCau, sheetName, tenHangSuaChua, ghiChuYCSC) {
+  if (selectedReceiveYCSC.find(x => x.maYeuCau === maYeuCau)) return;
+  selectedReceiveYCSC.push({ maYeuCau, sheetName, tenHangSuaChua, ghiChuYCSC: ghiChuYCSC || '' });
+  renderReceiveSelected();
+  document.getElementById('receiveYCSCDropdown').classList.remove('show');
+  document.getElementById('receiveYCSCSearch').value = '';
+}
+
+function removeReceiveYCSC(maYeuCau) {
+  selectedReceiveYCSC = selectedReceiveYCSC.filter(x => x.maYeuCau !== maYeuCau);
+  renderReceiveSelected();
+}
+
+function renderReceiveSelected() {
+  const listEl = document.getElementById('receiveSelectedList');
+  const formSection = document.getElementById('receiveFormSection');
+  if (!listEl) return;
+
+  listEl.innerHTML = selectedReceiveYCSC.map(x => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f1f5f9;border-radius:6px;margin-bottom:4px;">
+      <div>
+        <span style="font-weight:700;font-size:13px;">${esc(x.maYeuCau)}</span>
+        <span style="font-size:12px;color:#64748b;margin-left:8px;">${esc(x.tenHangSuaChua)} · ${esc(x.sheetName)}</span>
+      </div>
+      <button type="button" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:18px;" onclick="removeReceiveYCSC('${esc(x.maYeuCau)}')">&times;</button>
+    </div>
+  `).join('');
+
+  if (selectedReceiveYCSC.length > 0) {
+    if (formSection) formSection.style.display = '';
+    renderReceiveFormFields();
+  } else {
+    if (formSection) formSection.style.display = 'none';
+  }
+}
+
+function renderReceiveFormFields() {
+  const fieldsEl = document.getElementById('receiveFormFields');
+  if (!fieldsEl) return;
+  fieldsEl.innerHTML = `
+    <div class="edit-group">
+      <label class="edit-label">Nơi nhận (chung)</label>
+      <input id="receiveNoiNhanChung" class="edit-input" type="text" placeholder="Nhập nơi nhận chung cho tất cả YCSC...">
+    </div>
+    ${selectedReceiveYCSC.map((x, i) => `
+    <div style="border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:12px;background:#fafafa;">
+      <div style="font-weight:700;font-size:14px;margin-bottom:8px;color:#1e3a8a;">${esc(x.maYeuCau)}</div>
+      <div class="modal-field"><span class="modal-field-label">Kho</span><span class="modal-field-value">${esc(x.sheetName)}</span></div>
+      <div class="modal-field"><span class="modal-field-label">Tên hàng sửa chữa</span><span class="modal-field-value">${esc(x.tenHangSuaChua)}</span></div>
+      <div class="modal-field"><span class="modal-field-label">Ghi chú YCSC</span><span class="modal-field-value">${esc(x.ghiChuYCSC || '')}</span></div>
+      <div class="edit-group">
+        <label class="edit-label">Ghi chú sửa chữa</label>
+        <textarea id="receiveGhiChu_${i}" class="edit-textarea" rows="2" placeholder="Ghi chú..."></textarea>
+      </div>
+      <div class="edit-group">
+        <label class="edit-label">Giá tiền</label>
+        <input id="receiveGia_${i}" class="edit-input" type="text" placeholder="Nhập giá tiền...">
+      </div>
+    </div>
+    `).join('')}
+  `;
+}
+
+async function submitReceive() {
+  const noiNhan = document.getElementById('receiveNoiNhanChung')?.value || '';
+  const items = selectedReceiveYCSC.map((x, i) => ({
+    maYeuCau: x.maYeuCau,
+    sheetName: x.sheetName,
+    tenHangSuaChua: x.tenHangSuaChua,
+    ghiChuYCSC: x.ghiChuYCSC || '',
+    ghiChuSuaChua: document.getElementById('receiveGhiChu_' + i)?.value || '',
+    giaTien: document.getElementById('receiveGia_' + i)?.value || '',
+    noiNhan: noiNhan,
+  }));
+
+  const submitBtn = document.getElementById('receiveSubmitBtn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Đang lưu...';
+  try {
+    await apiPost('createNhanHang', { items });
+    showToast('Đã lưu nhận hàng!');
+    closeMuaLKModal();
+    applyFilters();
+  } catch (err) {
+    showToast('Lỗi: ' + err.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Lưu nhận hàng';
+  }
+}
+
+function renderBuyPartsYCSCDropdown(items) {
+  const dropdown = document.getElementById('buyPartsYCSCDropdown');
+  if (!dropdown) return;
+  if (!items || !items.length) {
+    dropdown.innerHTML = '<div class="suggest-empty">Không tìm thấy YCSC</div>';
+    dropdown.classList.add('show');
+    return;
+  }
+  dropdown.innerHTML = items.map(r => `
+    <div class="ycsc-search-item" onclick="chooseBuyPartsYCSC('${esc(r.maYeuCau)}','${esc(r.sheetName || '')}','${esc(r.tenHangSuaChua || '')}')">
+      <div>
+        <div style="font-weight:700;font-size:13px;">${esc(r.maYeuCau)}</div>
+        <div style="font-size:12px;color:#64748b;">${esc(r.tenHangSuaChua || '')}${r.imei ? ' · IMEI: ' + esc(r.imei) : ''}</div>
+      </div>
+      <span class="suggest-sheet" style="margin-left:auto;font-size:11px;color:var(--primary-2);font-weight:600;">${esc(r.sheetName || '')}</span>
+    </div>
+  `).join('');
+  dropdown.classList.add('show');
+}
+
+async function doBuyPartsYCSCSearch(q) {
+  try {
+    const res = await apiCall('suggestYCSC', { q });
+    const results = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
+    const manualInput = document.getElementById('buyPartsYCSCManual');
+    const qNorm = normalizeKeyword(q);
+    const qDigits = qNorm.replace(/\D/g, '');
+    const currentValue = normalizeKeyword(manualInput ? manualInput.value : '');
+    const filtered = results.filter(r => {
+      const maNorm = normalizeKeyword(r.maYeuCau);
+      const maDigits = maNorm.replace(/\D/g, '');
+      return maNorm !== currentValue && (
+        maNorm === qNorm ||
+        maNorm.startsWith(qNorm) ||
+        (qDigits && (maDigits === qDigits || maDigits.endsWith(qDigits) || maDigits.includes(qDigits))) ||
+        (!qDigits && maNorm.includes(qNorm))
+      );
+    });
+    renderBuyPartsYCSCDropdown(filtered);
+  } catch (err) {
+    console.error('YCSC search error:', err);
+    const dropdown = document.getElementById('buyPartsYCSCDropdown');
+    if (dropdown) {
+      dropdown.innerHTML = '<div class="suggest-empty">Lỗi tải gợi ý</div>';
+      dropdown.classList.add('show');
+    }
+  }
+}
+
+async function chooseBuyPartsYCSC(maYeuCau, sheetName, tenHangSuaChua) {
+  const warehouseInput = document.getElementById('buyPartsWarehouse');
+  const modelInput = document.getElementById('buyPartsModel');
+  const requesterInput = document.getElementById('buyPartsRequester');
+  const searchInput = document.getElementById('buyPartsYCSCSearch');
+  if (warehouseInput && !warehouseInput.value.trim()) warehouseInput.value = sheetName || '';
+  if (modelInput && tenHangSuaChua && !modelInput.value.trim()) modelInput.value = tenHangSuaChua;
+  if (requesterInput && !requesterInput.value.trim()) {
+    const currentUser = await loadBuyPartsCurrentUser();
+    if (currentUser) requesterInput.value = currentUser;
+  }
+  if (searchInput) {
+    searchInput.value = maYeuCau || '';
+    searchInput.dataset.selectedYcsc = maYeuCau || '';
+  }
+  hideBuyPartsYCSCDropdown();
+}
+
+function hideBuyPartsYCSCDropdown() {
+  const dd = document.getElementById('buyPartsYCSCDropdown');
+  if (dd) dd.classList.remove('show');
+}
+
+async function submitBuyParts() {
+  const searchInput = document.getElementById('buyPartsYCSCSearch');
+  const maYeuCau = (searchInput?.dataset.selectedYcsc || searchInput?.value || '').trim();
+  const kho = document.getElementById('buyPartsWarehouse')?.value.trim() || '';
+  const model = document.getElementById('buyPartsModel')?.value.trim() || '';
+  const linhKien = document.getElementById('buyPartsPartName')?.value.trim() || '';
+  const soLuong = parseInt(document.getElementById('buyPartsQuantity')?.value) || 1;
+  const ncc = document.getElementById('buyPartsSupplier')?.value.trim() || '';
+  const nguoi = document.getElementById('buyPartsRequester')?.value.trim() || '';
+  const ghiChu = document.getElementById('buyPartsNote')?.value.trim() || '';
+
+  if (!linhKien) { showToast('Vui lòng nhập linh kiện cần mua'); return; }
+
+  const btn = document.getElementById('buyPartsSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Đang tạo...';
+  try {
+    const items = [{
+      maYeuCau: maYeuCau,
+      khoSuaChua: kho,
+      model: model,
+      linhKienCanMua: linhKien,
+      soLuong: soLuong,
+      nccDeXuat: ncc,
+      nguoiDeXuat: nguoi,
+      ghiChu: ghiChu,
+    }];
+    await apiPost('createMuaLinhKien', { items });
+    showToast('Đã tạo yêu cầu mua linh kiện');
+    closeMuaLKModal();
+    loadBuyPartsData();
+  } catch (err) {
+    showToast('Lỗi: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Gửi yêu cầu mua hàng';
+  }
+}
+
+function closeMuaLKModal() {
+  document.getElementById('muaLKModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Bind modal close
+document.addEventListener('DOMContentLoaded', () => {
+  const closeBtn = document.getElementById('muaLKModalClose');
+  if (closeBtn) closeBtn.addEventListener('click', closeMuaLKModal);
+  const overlay = document.getElementById('muaLKModal');
+  if (overlay) overlay.addEventListener('click', (e) => { if (e.target === overlay) closeMuaLKModal(); });
+});
+
 </script>
 
 <!-- Chat Bubble -->
@@ -2224,7 +2971,7 @@ function esc(s) {
           <label>Nơi xử lý</label>
           <select id="supportLocation" class="support-select">
             <option value="Kho">Kho</option>
-            <option value="CNTT">CNTT</option>
+            <option value="CN45">CN45</option>
             <option value="CN141">CN141</option>
           </select>
         </div>
